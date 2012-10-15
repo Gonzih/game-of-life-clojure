@@ -92,6 +92,9 @@
 (defn new-state
   "Get new cell state, using live neighbors count and current cell state"
   [cnt cell]
+  {:pre [(or (= cell 1)
+             (= cell 0))
+         (< cnt 9)]}
   (cond
     ; Rule 1
     ; Any live cell with fewer than two live neighbours dies, as if caused by under-population.
