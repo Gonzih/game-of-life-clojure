@@ -2,33 +2,49 @@
   (:use [clojure.java.shell :only [sh]]
         [clojure.string :only [join]]))
 
-(defn random-world [size-x size-y]
+(defn random-world
+  "Generate random world for game of specified size"
+  [size-x size-y]
   (vec (take (* size-x size-y)
              (repeatedly #(rand-int 2)))))
 
-(defn new-game [size-x size-y]
+(defn new-game
+  "Generates new game with random world of specified size in it"
+  [size-x size-y]
   {:world (random-world size-x size-y) :size-x size-x :size-y size-y})
 
-(defn map-cell [cell]
+(defn map-cell
+  "Render live cell as \"·\""
+  [cell]
   (if (= cell 1) "·"))
 
-(defn print-world [{:keys [size-x world]}]
+(defn print-world
+  "Print world helper function"
+  [{:keys [size-x world]}]
   (join "\n" (for [row (partition size-x world)]
                (join " " (map map-cell row)))))
 
-(defn clear [])
+(defn clear
+  "Clear screen"
+  [])
 
-(defn generate-neighbor-vecs []
+(defn generate-neighbor-vecs
+  "Generate vector of neighbor offsets"
+  []
   (let [v [-1 0 1]]
     (->> (for [x v y v] [x y])
          (remove #(every? zero? %)))))
 
 (def neighbor-vecs (generate-neighbor-vecs))
 
-(defn calc-coords-from-vec [x y [v_x v_y]]
+(defn calc-coords-from-vec
+  "Generate coordinates from neighbor offset"
+  [x y [v_x v_y]]
   [(+ x v_x) (+ y v_y)])
 
-(defn get-index [size-x [x y]]
+(defn get-index
+  "Get index in world vector by coordinates"
+  [size-x [x y]]
   (letfn [(dec-if-gt-zero [n]
             (if (> 0 n)
               (dec n)
@@ -38,32 +54,44 @@
         (* size-x)
         (+ (dec-if-gt-zero x)))))
 
-(defn out-of-bound? [size-x size-y [x y]]
+(defn out-of-bound?
+  "Check if coordinates out of bound of world"
+  [size-x size-y [x y]]
   (or (>= x size-x)
       (>= y size-y)
       (< x 0)
       (< y 0)))
 
-(defn neighbor-indexes [{:keys [size-x size-y]} x y vecs]
+(defn neighbor-indexes
+  "Get neihbor indexes for given coordinate"
+  [{:keys [size-x size-y]} x y vecs]
   (->> vecs
        (map (partial calc-coords-from-vec x y))
        (remove (partial out-of-bound? size-x size-y))
        (map (partial get-index size-x))))
 
-(defn get-cell [world index]
+(defn get-cell
+  "Retreive cell state from world by index"
+  [world index]
   (get world index 0))
 
-(defn neighbors [{:keys [world]} indexes]
+(defn neighbors
+  "Get niighbors from world by they indexes"
+  [{:keys [world]} indexes]
   (map (partial get-cell world) indexes))
 
-(defn count-live-neighbors [game x y]
+(defn count-live-neighbors
+  "Get count of live neighbors for given game and coordinates"
+  [game x y]
   (->> neighbor-vecs
        (neighbor-indexes game x y)
        (neighbors game)
        (remove zero?)
        (count)))
 
-(defn new-state [cnt cell]
+(defn new-state
+  "Get new cell state, using live neighbors count and current cell state"
+  [cnt cell]
   (cond
     ; Rule 1
     ; Any live cell with fewer than two live neighbours dies, as if caused by under-population.
@@ -84,7 +112,9 @@
          (> 3 cnt)) 1
     :else cell))
 
-(defn tick [game]
+(defn tick
+  "Run game through 1 tick"
+  [game]
   (loop [{:keys [size-x size-y world] :as game} game
          [[x y] & coords] (for [x (range size-x) y (range size-y)] [x y])]
     (if (empty? coords)
@@ -98,7 +128,7 @@
         (recur new-game coords)))))
 
 (defn -main
-  "I don't do a whole lot."
+  "Run game"
   [& args]
   (let [size-x 20 size-y 20]
     (loop [game (new-game size-x size-y)]
